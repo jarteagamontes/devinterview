@@ -4,7 +4,7 @@ RUN mkdir /app
 WORKDIR /app
 COPY app-angular/package*.json ./
 RUN npm install --unsafe-perm
-COPY . .
+COPY app-angular/. .
 RUN npm run build
 
 ##=W=##
