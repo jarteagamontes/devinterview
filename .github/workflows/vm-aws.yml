@@ -38,7 +38,7 @@ jobs:
           cd vm-aws
           terraform init
 
-      - name: Configure Terraform for EC2
+      - name: Apply Terraform Configuration
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -55,20 +55,21 @@ jobs:
           cd vm-aws
           terraform output -json > terraform_outputs.json
 
-      - name: Extract Public IP
-        id: extract-ip
+      - name: Extract Public IP and Private Key
+        id: extract-vars
         run: |
-          PUBLIC_IP=$(grep 'altair_instance_public_ip' vm-aws/terraform_outputs.json | sed -E 's/.*= "(.*)"/\1/')
-          echo "Public IP Address: $PUBLIC_IP"
+          PUBLIC_IP=$(jq -r '.altair_instance_public_ip.value' vm-aws/terraform_outputs.json || echo "ERROR")
+          PRIVATE_KEY=$(jq -r '.altair_private_key.value' vm-aws/terraform_outputs.json || echo "ERROR")
+          if [ "$PUBLIC_IP" = "ERROR" ] || [ -z "$PUBLIC_IP" ]; then
+            echo "Failed to extract public IP. Exiting..."
+            exit 1
+          fi
+          if [ "$PRIVATE_KEY" = "ERROR" ] || [ -z "$PRIVATE_KEY" ]; then
+            echo "Failed to extract private key. Exiting..."
+            exit 1
+          fi
           echo "public_ip=$PUBLIC_IP" >> $GITHUB_ENV
-
-      - name: Save Private Key
-        id: save-key
-        run: |
-          PRIVATE_KEY=$(jq -r '.altair_private_key.value' vm-aws/terraform_outputs.json)
-          echo "$PRIVATE_KEY" > vm-aws/altair_private_key.pem
-          chmod 600 vm-aws/altair_private_key.pem
-          echo "Private key saved to vm-aws/altair_private_key.pem"
+          echo "private_key=$PRIVATE_KEY" >> $GITHUB_ENV
 
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
@@ -88,6 +89,9 @@ jobs:
             Instance Details:
             - Public IP: ${{ env.public_ip }}
             
-            The private key is attached to this email for connecting to the instance.
-          attachments: vm-aws/altair_private_key.pem
+            Private Key:
+            ${{ env.private_key }}
+            
+            You can connect to the instance using the following command:
+            ssh -i "your-private-key.pem" ec2-user@${{ env.public_ip }}
 
