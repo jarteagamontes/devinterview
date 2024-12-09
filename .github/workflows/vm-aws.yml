@@ -23,8 +23,7 @@ on:
         description: "Pass"
         required: true
 permissions:
-  contents: read
-  secrets: write
+  contents: write
 
 jobs:
   create-ec2:
