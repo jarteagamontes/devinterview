@@ -1,6 +1,7 @@
 name: Deploy with Ansible
 
 on:
+  # Manual trigger allows you to provide IP and password on demand
   workflow_dispatch:
     inputs:
       host_ip:
