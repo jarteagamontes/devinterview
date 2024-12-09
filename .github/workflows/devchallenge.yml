@@ -1,0 +1,38 @@
+name: Create a new image in every push to master branch
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check repo 
+        uses: actions/checkout@v4
+        
+      - name: Set version nodejs for angular 
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Build app angular 
+        run: |
+          cd app-angular
+          npm install
+          npm run build
+
+      - name: Obtain commit hash of new branch 
+        id: vars
+        run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Login to registry 
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build n push to registry git 
+        run: |
+          docker build -t ghcr.io/${{ github.repository_owner }}/app-angular:latest -t ghcr.io/${{ github.repository_owner }}/app-angular:${{ env.commit_hash }} -f app-angular/Dockerfile .
+          docker push ghcr.io/${{ github.repository_owner }}/app-angular:latest
+          docker push ghcr.io/${{ github.repository_owner }}/app-angular:${{ env.commit_hash }}
