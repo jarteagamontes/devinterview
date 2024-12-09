@@ -1,4 +1,4 @@
-name: Create EC2 Instance
+name: Create EC2 Instance with Outputs
 
 on:
   workflow_dispatch:
@@ -19,6 +19,9 @@ on:
         description: "Name of the EC2 Instance"
         required: true
         default: "AltairInstance"
+      altair_instance_password:
+        description: "Password for EC2 Instance"
+        required: true
 
 jobs:
   create-ec2:
@@ -48,7 +51,8 @@ jobs:
             -var="altair_aws_region=${{ github.event.inputs.altair_aws_region }}" \
             -var="altair_ami_id=${{ github.event.inputs.altair_ami_id }}" \
             -var="altair_instance_type=${{ github.event.inputs.altair_instance_type }}" \
-            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}"
+            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}" \
+            -var="altair_instance_password=${{ github.event.inputs.altair_instance_password }}"
 
       - name: Extract Public IP
         id: extract-ip
