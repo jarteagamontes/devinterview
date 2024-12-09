@@ -19,9 +19,6 @@ on:
         description: "Name of the EC2 Instance"
         required: true
         default: "AltairInstance"
-      altair_instance_password:
-        description: "Password for EC2 Instance"
-        required: true
 
 jobs:
   create-ec2:
@@ -36,6 +33,11 @@ jobs:
         with:
           terraform_version: "1.5.6"
 
+      - name: Initialize Terraform
+        run: |
+          cd vm-aws
+          terraform init
+
       - name: Apply Terraform Configuration
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -46,8 +48,7 @@ jobs:
             -var="altair_aws_region=${{ github.event.inputs.altair_aws_region }}" \
             -var="altair_ami_id=${{ github.event.inputs.altair_ami_id }}" \
             -var="altair_instance_type=${{ github.event.inputs.altair_instance_type }}" \
-            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}" \
-            -var="altair_instance_password=${{ github.event.inputs.altair_instance_password }}"
+            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}"
 
       - name: Extract Public IP
         id: extract-ip
