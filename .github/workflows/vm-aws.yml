@@ -58,7 +58,7 @@ jobs:
       - name: Extract Public IP
         id: extract-ip
         run: |
-          PUBLIC_IP=$(jq -r '.altair_instance_public_ip.value' vm-aws/terraform_outputs.json)
+          PUBLIC_IP=$(grep 'altair_instance_public_ip' vm-aws/terraform_outputs.json | sed -E 's/.*= "(.*)"/\1/')
           echo "Public IP Address: $PUBLIC_IP"
           echo "public_ip=$PUBLIC_IP" >> $GITHUB_ENV
 
