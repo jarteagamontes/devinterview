@@ -15,7 +15,7 @@ resource "aws_security_group" "altair_ec2_security_group" {
   }
 
   ingress {
-    description = "Allow http "
+    description = "Allow http"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -51,16 +51,5 @@ resource "aws_instance" "altair_ec2_instance" {
   tags = {
     Name = var.altair_instance_name
   }
-}
-
-output "altair_instance_public_ip" {
-  value       = aws_instance.altair_ec2_instance.public_ip
-  description = "Public ip of ec2 instance"
-}
-
-output "altair_private_key" {
-  value       = tls_private_key.altair_ec2_key_pair.private_key_pem
-  description = "Privatekey for ec2 instance"
-  sensitive   = true
 }
 
