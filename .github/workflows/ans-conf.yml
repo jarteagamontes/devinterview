@@ -1,4 +1,4 @@
-name: Execute Ansible Playbook
+name: Execute Ansible Playbook with Inventory
 
 on:
   workflow_dispatch:
@@ -8,6 +8,9 @@ on:
         required: true
         default: "conf-containers/playbook.yml"
 
+permissions:
+  contents: write
+
 jobs:
   ansible:
     runs-on: ubuntu-latest
@@ -15,6 +18,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible sshpass
 
       - name: Create Inventory File
         run: |
@@ -26,10 +34,13 @@ jobs:
           echo "ansible_connection=ssh" >> conf-containers/inventory
           echo "ansible_ssh_extra_args='-o StrictHostKeyChecking=no'" >> conf-containers/inventory
 
-      - name: Install Ansible
+      - name: Commit Inventory File
         run: |
-          sudo apt update
-          sudo apt install -y ansible sshpass
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add conf-containers/inventory
+          git commit -m "Add dynamic inventory for Ansible"
+          git push
 
       - name: Run Ansible Playbook
         run: |

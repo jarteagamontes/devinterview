@@ -1,4 +1,4 @@
-name: Create EC2 Instance with Outputs
+name: Create EC2 Instance
 
 on:
   workflow_dispatch:
@@ -19,9 +19,10 @@ on:
         description: "Name of the EC2 Instance"
         required: true
         default: "AltairInstance"
-      altair_instance_password:
-        description: "Password for EC2 Instance"
-        required: true
+
+permissions:
+  contents: read
+  secrets: write
 
 jobs:
   create-ec2:
@@ -51,8 +52,7 @@ jobs:
             -var="altair_aws_region=${{ github.event.inputs.altair_aws_region }}" \
             -var="altair_ami_id=${{ github.event.inputs.altair_ami_id }}" \
             -var="altair_instance_type=${{ github.event.inputs.altair_instance_type }}" \
-            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}" \
-            -var="altair_instance_password=${{ github.event.inputs.altair_instance_password }}"
+            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}"
 
       - name: Extract Public IP
         id: extract-ip
@@ -63,15 +63,15 @@ jobs:
             echo "Failed to extract public IP. Exiting..."
             exit 1
           fi
-          echo "::set-output name=public_ip::$PUBLIC_IP"
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_ENV
           echo "Extracted Public IP: $PUBLIC_IP"
 
       - name: Store Public IP in GitHub Secret
         uses: actions/github-script@v6
         with:
           script: |
-            const publicIP = "${{ steps.extract-ip.outputs.public_ip }}";
-            await github.actions.createOrUpdateRepoSecret({
+            const publicIP = process.env.public_ip;
+            await github.rest.actions.createOrUpdateRepoSecret({
               owner: context.repo.owner,
               repo: context.repo.repo,
               secret_name: "EC2_PUBLIC_IP",
