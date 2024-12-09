@@ -12,6 +12,10 @@ on:
         description: 'Password for the remote host'
         required: true
         default: 'yourpassword'
+      host_user:
+        description: 'User of ec2'
+        required: true
+        default: 'ec2-user'
 
 jobs:
   run-playbook:
@@ -28,7 +32,7 @@ jobs:
       - name: Run Ansible Playbook
         run: |
           ansible-playbook -i "${{ github.event.inputs.host_ip }}," \
-                           --user=your_remote_user \
+                           --user="${{ github.event.inputs.host_user }}" \
                            --extra-vars "ansible_ssh_pass=${{ github.event.inputs.host_password }}" \
                            --extra-vars "github_owner=${{ github.repository_owner }}" \
                            -e 'ansible_ssh_common_args="-o StrictHostKeyChecking=no"' \
