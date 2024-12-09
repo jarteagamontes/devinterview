@@ -31,5 +31,6 @@ jobs:
                            --user=your_remote_user \
                            --extra-vars "ansible_ssh_pass=${{ github.event.inputs.host_password }}" \
                            --extra-vars "github_owner=${{ github.repository_owner }}" \
+                           -e 'ansible_ssh_common_args="-o StrictHostKeyChecking=no"' \
                            conf-containers/playbook.yml
 
