@@ -51,7 +51,4 @@ resource "aws_instance" "altair_ec2_instance" {
   }
 }
 
-output "altair_instance_public_ip" {
-  value = aws_instance.altair_ec2_instance.public_ip
-}
 
