@@ -1,10 +1,10 @@
-name: Launch EC2 Instance in AWS
+name: Create EC2 Instance
 
 on:
   workflow_dispatch:
     inputs:
       altair_aws_region:
-        description: "AWS region"
+        description: "AWS Region"
         required: true
         default: "us-east-1"
       altair_ami_id:
@@ -12,20 +12,19 @@ on:
         required: true
         default: "ami-0c02fb55956c7d316"
       altair_instance_type:
-        description: "EC2 instance type"
+        description: "EC2 Instance Type"
         required: true
         default: "t2.micro"
       altair_instance_name:
-        description: "Name of the EC2 instance"
+        description: "Name of the EC2 Instance"
         required: true
         default: "AltairInstance"
       altair_instance_password:
-        description: "Password for EC2 instance"
+        description: "Password for EC2 Instance"
         required: true
-        default: "MySecurePassword123"
 
 jobs:
-  terraform:
+  create-ec2:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,11 +35,6 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.6"
-
-      - name: Initialize Terraform
-        run: |
-          cd vm-aws
-          terraform init
 
       - name: Apply Terraform Configuration
         env:
@@ -58,31 +52,24 @@ jobs:
       - name: Extract Public IP
         id: extract-ip
         run: |
+          cd vm-aws
           PUBLIC_IP=$(terraform output -raw altair_instance_public_ip || echo "ERROR")
           if [ "$PUBLIC_IP" = "ERROR" ] || [ -z "$PUBLIC_IP" ]; then
             echo "Failed to extract public IP. Exiting..."
             exit 1
           fi
-          echo "public_ip=$PUBLIC_IP" >> $GITHUB_ENV
+          echo "::set-output name=public_ip::$PUBLIC_IP"
+          echo "Extracted Public IP: $PUBLIC_IP"
 
-      - name: Send Email Notification
-        uses: dawidd6/action-send-mail@v3
+      - name: Store Public IP in GitHub Secret
+        uses: actions/github-script@v6
         with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: AWS EC2 Instance Created
-          to: recipient@example.com
-          from: ${{ secrets.EMAIL_USERNAME }}
-          body: |
-            Hello,
-
-            The AWS EC2 instance has been successfully created.
-
-            Instance Details:
-            - Public IP: ${{ env.public_ip }}
-
-            You can connect to the instance using the following command:
-            ssh ec2-user@${{ env.public_ip }}
+          script: |
+            const publicIP = "${{ steps.extract-ip.outputs.public_ip }}";
+            await github.actions.createOrUpdateRepoSecret({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              secret_name: "EC2_PUBLIC_IP",
+              encrypted_value: publicIP,
+            });
 

@@ -1,0 +1,37 @@
+- name: Install and Execute Docker
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install Docker
+      yum:
+        name: docker
+        state: latest
+
+    - name: Start Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Check if the container is running
+      shell: docker ps --filter "name=appangular" --format "{{.Names}}"
+      register: container_status
+      ignore_errors: true
+
+    - name: Stop and remove the container if it exists
+      shell: |
+        docker stop appangular || true
+        docker rm appangular || true
+      when: container_status.stdout != ""
+
+    - name: Pull the latest image from GitHub Container Registry
+      shell: docker pull ghcr.io/{{ github_owner }}/app-angular:latest
+
+    - name: Run the container with the latest version
+      docker_container:
+        name: appangular
+        image: ghcr.io/{{ github_owner }}/app-angular:latest
+        ports:
+          - "80:80"
+

@@ -1,8 +1,8 @@
 name: Create a new image in every push to master branch
 on:
   push:
-    branches:
-      - master
+    paths:
+      - 'app-angular/**'
 jobs:
   build-and-push:
     runs-on: ubuntu-latest

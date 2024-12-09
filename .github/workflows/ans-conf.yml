@@ -1,0 +1,37 @@
+name: Execute Ansible Playbook
+
+on:
+  workflow_dispatch:
+    inputs:
+      ansible_playbook_path:
+        description: "Path to the Ansible playbook (relative to the repo root)"
+        required: true
+        default: "conf-containers/playbook.yml"
+
+jobs:
+  ansible:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Inventory File
+        run: |
+          echo "[ec2]" > conf-containers/inventory
+          echo "${{ secrets.EC2_PUBLIC_IP }}" >> conf-containers/inventory
+          echo "[ec2:vars]" >> conf-containers/inventory
+          echo "ansible_user=ec2-user" >> conf-containers/inventory
+          echo "ansible_password=${{ secrets.EC2_PASSWORD }}" >> conf-containers/inventory
+          echo "ansible_connection=ssh" >> conf-containers/inventory
+          echo "ansible_ssh_extra_args='-o StrictHostKeyChecking=no'" >> conf-containers/inventory
+
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible sshpass
+
+      - name: Run Ansible Playbook
+        run: |
+          ansible-playbook -i conf-containers/inventory ${{ github.event.inputs.ansible_playbook_path }}
+
