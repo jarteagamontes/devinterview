@@ -1,22 +1,22 @@
-name: Launch ec2 isntance in aws 
+name: Launch EC2 Instance in AWS
 
 on:
   workflow_dispatch:
     inputs:
       altair_aws_region:
-        description: "aws region"
+        description: "AWS region"
         required: true
         default: "us-east-1"
       altair_ami_id:
-        description: "ami  for ec2"
+        description: "AMI ID for EC2"
         required: true
         default: "ami-0c02fb55956c7d316"
       altair_instance_type:
-        description: "ec2 type"
+        description: "EC2 instance type"
         required: true
         default: "t2.micro"
       altair_instance_name:
-        description: "Name of the ec2"
+        description: "Name of the EC2 instance"
         required: true
         default: "AltairInstance"
 
@@ -25,20 +25,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Version terraform 
+      - name: Set Up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.6"
 
-      - name: Init terraform 
+      - name: Initialize Terraform
         run: |
           cd vm-aws
           terraform init
 
-      - name: Conf terrafgorm ec2 
+      - name: Configure Terraform for EC2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -50,20 +50,44 @@ jobs:
             -var="altair_instance_type=${{ github.event.inputs.altair_instance_type }}" \
             -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}"
 
-      - name: Salidas
+      - name: Retrieve Terraform Outputs
         run: |
           cd vm-aws
           terraform output -json > terraform_outputs.json
 
-      - name: Ip public
+      - name: Extract Public IP
+        id: extract-ip
         run: |
           PUBLIC_IP=$(jq -r '.altair_instance_public_ip.value' vm-aws/terraform_outputs.json)
           echo "Public IP Address: $PUBLIC_IP"
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_ENV
 
-      - name: Save key 
+      - name: Save Private Key
+        id: save-key
         run: |
           PRIVATE_KEY=$(jq -r '.altair_private_key.value' vm-aws/terraform_outputs.json)
-          echo "$PRIVATE_KEY" > altair_private_key.pem
-          chmod 600 altair_private_key.pem
-          echo "Private key saved to altair_private_key.pem"
+          echo "$PRIVATE_KEY" > vm-aws/altair_private_key.pem
+          chmod 600 vm-aws/altair_private_key.pem
+          echo "Private key saved to vm-aws/altair_private_key.pem"
+
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "AWS EC2 Instance Created"
+          to: recipient@example.com
+          from: ${{ secrets.EMAIL_USERNAME }}
+          body: |
+            Hello,
+
+            The AWS EC2 instance has been successfully created.
+
+            Instance Details:
+            - Public IP: ${{ env.public_ip }}
+            
+            The private key is attached to this email for connecting to the instance.
+          attachments: vm-aws/altair_private_key.pem
 
