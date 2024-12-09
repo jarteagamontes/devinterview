@@ -19,6 +19,10 @@ on:
         description: "Name of the EC2 instance"
         required: true
         default: "AltairInstance"
+      altair_instance_password:
+        description: "Password for EC2 instance"
+        required: true
+        default: "MySecurePassword123"
 
 jobs:
   terraform:
@@ -48,27 +52,18 @@ jobs:
             -var="altair_aws_region=${{ github.event.inputs.altair_aws_region }}" \
             -var="altair_ami_id=${{ github.event.inputs.altair_ami_id }}" \
             -var="altair_instance_type=${{ github.event.inputs.altair_instance_type }}" \
-            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}"
+            -var="altair_instance_name=${{ github.event.inputs.altair_instance_name }}" \
+            -var="altair_instance_password=${{ github.event.inputs.altair_instance_password }}"
 
-      - name: Extract Public IP and Private Key
-        id: extract-vars
+      - name: Extract Public IP
+        id: extract-ip
         run: |
           PUBLIC_IP=$(terraform output -raw altair_instance_public_ip || echo "ERROR")
-          PRIVATE_KEY=$(terraform output -raw altair_private_key || echo "ERROR")
           if [ "$PUBLIC_IP" = "ERROR" ] || [ -z "$PUBLIC_IP" ]; then
             echo "Failed to extract public IP. Exiting..."
             exit 1
           fi
-          if [ "$PRIVATE_KEY" = "ERROR" ] || [ -z "$PRIVATE_KEY" ]; then
-            echo "Failed to extract private key. Exiting..."
-            exit 1
-          fi
           echo "public_ip=$PUBLIC_IP" >> $GITHUB_ENV
-          echo "private_key=$PRIVATE_KEY" >> $GITHUB_ENV
-
-      - name: Debug Terraform State
-        run: |
-          terraform show
 
       - name: Send Email Notification
         uses: dawidd6/action-send-mail@v3
@@ -87,10 +82,7 @@ jobs:
 
             Instance Details:
             - Public IP: ${{ env.public_ip }}
-            
-            Private Key:
-            ${{ env.private_key }}
-            
+
             You can connect to the instance using the following command:
-            ssh -i "your-private-key.pem" ec2-user@${{ env.public_ip }}
+            ssh ec2-user@${{ env.public_ip }}
 

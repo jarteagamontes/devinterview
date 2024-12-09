@@ -4,10 +4,10 @@ provider "aws" {
 
 resource "aws_security_group" "altair_ec2_security_group" {
   name        = "altair-ec2-security-group"
-  description = "Allow ssh and http access"
+  description = "Allow SSH and HTTP access"
 
   ingress {
-    description = "Allow ssh"
+    description = "Allow SSH"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -15,7 +15,7 @@ resource "aws_security_group" "altair_ec2_security_group" {
   }
 
   ingress {
-    description = "Allow http"
+    description = "Allow HTTP"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -30,26 +30,28 @@ resource "aws_security_group" "altair_ec2_security_group" {
   }
 }
 
-resource "tls_private_key" "altair_ec2_key_pair" {
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
-
-resource "aws_key_pair" "altair_generated_key" {
-  key_name   = "${var.altair_instance_name}-key"
-  public_key = tls_private_key.altair_ec2_key_pair.public_key_openssh
-}
-
 resource "aws_instance" "altair_ec2_instance" {
   ami           = var.altair_ami_id
   instance_type = var.altair_instance_type
-  key_name      = aws_key_pair.altair_generated_key.key_name
   security_groups = [
     aws_security_group.altair_ec2_security_group.name
   ]
 
+  # Set user password and enable PasswordAuthentication
+  user_data = <<-EOF
+              #!/bin/bash
+              echo "ec2-user:${var.altair_instance_password}" | chpasswd
+              sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+              sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+              systemctl restart sshd
+              EOF
+
   tags = {
     Name = var.altair_instance_name
   }
+}
+
+output "altair_instance_public_ip" {
+  value = aws_instance.altair_ec2_instance.public_ip
 }
 
