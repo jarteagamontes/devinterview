@@ -7,6 +7,7 @@
       yum:
         name: docker
         state: latest
+        use_backend: dnf4
 
     - name: Start Docker
       service:
